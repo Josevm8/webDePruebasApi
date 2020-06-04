@@ -32,72 +32,38 @@ public class WebDePruebasServiceImpl implements WebDePruebasService {
 	public String consultarApi(GeneralHeader generalHeader, JsonNode jsonNode) throws Exception {
 		
 		installCertificado();
-		String tipo = jsonNode.get("metodo").asText();
+		String metodo = jsonNode.get("metodo").asText();
 
-		if (tipo.equalsIgnoreCase("GET")) {
-			return getApi(jsonNode, generalHeader);
+		if (metodo.equalsIgnoreCase("GET")) {
+			return getApi(jsonNode, generalHeader, metodo);
 		} else {
-			return postApi(jsonNode, generalHeader);
+			return postApi(jsonNode, generalHeader, metodo);
 		}
-	}
-
-	public void installCertificado() {
-		// Create a trust manager that does not validate certificate chains
-		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-				return null;
-			}
-
-			public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-			}
-
-			public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-			}
-		} };
-
-		// Install the all-trusting trust manager
-		try {
-			SSLContext sc = SSLContext.getInstance("SSL");
-			sc.init(null, trustAllCerts, new java.security.SecureRandom());
-			HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-		} catch (Exception e) {
-		}
-
-		// Now you can access an https URL without having the certificate in the
-		// truststore
 	}
 	
-	public String postApi(JsonNode jsonNode, GeneralHeader generalHeader) throws Exception {
+	public String postApi(JsonNode jsonNode, GeneralHeader generalHeader, String metodo) throws Exception {
 		//fuente https://www.baeldung.com/httpurlconnection-post
 		//https://github.com/eugenp/tutorials/blob/master/core-java-modules/core-java-networking-2/src/main/java/com/baeldung/urlconnection/PostJSONWithHttpURLConnection.java
 		
-		URL url = new URL(jsonNode.get("uri").asText());    //CREAR URL
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();   //ABRIR CONEXION
-		
-		// Add headers
-	    conn.setRequestMethod("POST");  //Establecer el método de solicitud
-	    conn.setRequestProperty("Content-Type", "application/json"); //para enviar el contenido de la solicitud en formato JSON
-	    conn.addRequestProperty("Accept", "application/json");  //Formato de respuesta
-	    conn.setRequestProperty("app-code", generalHeader.getApplicationCode());
-	    conn.setRequestProperty("app-name", generalHeader.getApplicationName());
+		HttpURLConnection con = setHeader(jsonNode, generalHeader, metodo);
 	
 	    // Send data
-	    conn.setDoOutput(true); //Para enviar contenido de la petición
+		con.setDoOutput(true); //Para enviar contenido de la petición
 	    
 	    //String jsonInputString = "{"name": "Upendra", "job": "Programmer"}";
 	    String jsonInputString = jsonNode.get("body").toString();
 	    
-	    try(OutputStream os = conn.getOutputStream()) {          //nesitariamos escribirlo en el conn se almacena el body
+	    try(OutputStream os = con.getOutputStream()) {          //nesitariamos escribirlo en el conn se almacena el body
 	        byte[] input = jsonInputString.getBytes("utf-8");
 	        os.write(input, 0, input.length);           
 	    }
 	    
-	    int code = conn.getResponseCode();
+	    int code = con.getResponseCode();
 		System.out.println(code);
 		
 		//LEER CONTENIDO DE RSPTA 
 		
-		try(BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"))){
+		try(BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "utf-8"))){
 			StringBuilder response = new StringBuilder();
 			String responseLine = null;
 			while ((responseLine = br.readLine()) != null) {
@@ -109,10 +75,9 @@ public class WebDePruebasServiceImpl implements WebDePruebasService {
 	 
 	}
 
-	public String getApi(JsonNode jsonNode, GeneralHeader generalHeader) throws Exception {
+	public String getApi(JsonNode jsonNode, GeneralHeader generalHeader, String metodo) throws Exception {
 
-		String metodo = "GET";
-		HttpsURLConnection httpConn = getConnectionHeader(jsonNode, generalHeader, metodo);
+		HttpURLConnection httpConn = setHeader(jsonNode, generalHeader, metodo);
 
 		httpConn.setConnectTimeout(50000);
 		httpConn.setReadTimeout(50000);
@@ -143,16 +108,46 @@ public class WebDePruebasServiceImpl implements WebDePruebasService {
 
 	}
 
-	public HttpsURLConnection getConnectionHeader(JsonNode jsonNode, GeneralHeader generalHeader, String metodo)
+	public HttpURLConnection setHeader(JsonNode jsonNode, GeneralHeader generalHeader, String metodo)
 			throws Exception {
-		URL url = new URL(jsonNode.get("uri").asText());
-		System.out.println("URL -->" + jsonNode.get("uri").asText());
-		HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-		conn.setRequestMethod(metodo);
-		conn.setRequestProperty("app-code", generalHeader.getApplicationCode());
-		conn.setRequestProperty("app-name", generalHeader.getApplicationName());
+		
+		URL url = new URL(jsonNode.get("uri").asText());    //CREAR URL
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();   //ABRIR CONEXION
+		
+		// Add headers
+	    conn.setRequestMethod(metodo);  //Establecer el método de solicitud
+	    conn.setRequestProperty("Content-Type", "application/json"); //para enviar el contenido de la solicitud en formato JSON
+	    conn.addRequestProperty("Accept", "application/json");  //Formato de respuesta
+	    conn.setRequestProperty("app-code", generalHeader.getApplicationCode());
+	    conn.setRequestProperty("app-name", generalHeader.getApplicationName());
+		
 		return conn;
+	}
+	
+	public void installCertificado() {
+		// Create a trust manager that does not validate certificate chains
+		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+				return null;
+			}
 
+			public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			}
+
+			public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			}
+		} };
+
+		// Install the all-trusting trust manager
+		try {
+			SSLContext sc = SSLContext.getInstance("SSL");
+			sc.init(null, trustAllCerts, new java.security.SecureRandom());
+			HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+		} catch (Exception e) {
+		}
+
+		// Now you can access an https URL without having the certificate in the
+		// truststore
 	}
 
 }
