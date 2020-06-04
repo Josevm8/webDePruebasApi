@@ -27,12 +27,20 @@ public class WebDePruebasController {
 	public String sendQuery(@RequestHeader Map<String, String> headers, @RequestBody JsonNode jsonNode) throws Exception {
 		GeneralHeader cabecera = new GeneralHeader();
 		
-		headers.forEach((key, value) -> {
-			System.out.println(String.format("Header '%s' = %s", key, value));
+		headers.forEach((key, value)  -> {
+			if(key.equalsIgnoreCase("app-code")) {
+				cabecera.setApplicationCode(value);
+				System.out.println("app-code "+cabecera.getApplicationCode());
+			}if(key.equalsIgnoreCase("app-name")){
+				cabecera.setApplicationName(value);
+				System.out.println("app-name "+cabecera.getApplicationName());
+			}
+			
+			//System.out.println(String.format("Header '%s' = %s", key, value));
 	    });
 		
-		cabecera.setApplicationCode("RO");
-		cabecera.setApplicationName("apix");
+		//cabecera.setApplicationCode("RO");
+		//cabecera.setApplicationName("apix");
 		
 		return webDePruebasService.consultarApi(cabecera, jsonNode);
 		
